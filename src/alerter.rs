@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::coin_wallet::CoinWallet;
 
-use telegram_bot::{Api, CanSendMessage, ChatId};
+use teloxide::{requests::{Request, Requester}, Bot};
 
 use tokio::time::sleep;
 use tokio_binance::WithdrawalClient;
@@ -25,7 +25,7 @@ pub struct Alerter {
     api_key: String,
     secret_key: String,
     binance_client: Option<WithdrawalClient>,
-    telegram_api: Option<Api>,
+    telegram_api: Option<Bot>,
     debug: bool
 }
 
@@ -33,18 +33,18 @@ impl Alerter {
     pub fn new(telegram_bot_token: String, telegram_chat_id: String, api_key: String, secret_key: String) -> Self {
         Alerter{telegram_bot_token, telegram_chat_id, api_key, secret_key, binance_client: None, telegram_api: None, debug: false}
     }
-        
-    pub fn init_binance_api(&mut self) -> Result<(), tokio_binance::error::Error> {
+    
+    fn init_binance_api(&mut self) -> Result<(), tokio_binance::error::Error> {
         self.binance_client = Some(WithdrawalClient::connect(&self.api_key, &self.secret_key, "https://api.binance.com")?);
         Ok(())
     }
     
-    pub fn init_telegram_api(&mut self) {
+    fn init_telegram_api(&mut self) {
         if !self.debug {
-            self.telegram_api = Some(Api::new(&self.telegram_bot_token));
+            self.telegram_api = Some(teloxide::Bot::new(&self.telegram_bot_token));
         }
     }
-
+    
     async fn get_wallet_status(&self, coin_name: &str) -> Result<CoinWallet, String> {
         if let Some(client) = &self.binance_client {
             match client.get_capital_config().with_recv_window(10000).json::<Vec<Value>>().await {
@@ -86,33 +86,20 @@ impl Alerter {
             Err(String::from("Binance client not initialized"))
         }
     }
-
-    pub async fn send_telegram_message(&self, chat: &ChatId, msg: &str) -> Result<(), telegram_bot::Error> {
+    
+    async fn send_telegram_message(&self, chat_id: i64, msg: &str) -> Result<(), teloxide::RequestError> {
         if let Some(api) = &self.telegram_api {
-            if let Err(err) = api.send(chat.text(msg)).await {
-                eprintln!("Error sending telegram msg {}", err);
-                return Err(err)
-            }
+            api.send_message(chat_id, msg).send().await?;
         }
         Ok (())
     }
-
-    pub async fn send_telegram_message_timeout(&self, chat: &ChatId, msg: &str, duration: Duration) -> Result<(), telegram_bot::Error> {
-        if let Some(api) = &self.telegram_api {
-            if let Err(err) = api.send_timeout(chat.text(msg), duration).await {
-                eprintln!("Error sending telegram msg {}", err);
-                return Err(err)
-            }
-        }
-        Ok (())
-    }
-
+    
     pub async fn run(&mut self, coin: &str, debug: bool) -> Result<(), Box<dyn std::error::Error>> { //TODO: use a proper error type
         self.debug = debug;
         self.init_binance_api()?;
         self.init_telegram_api();
-
-        let chat = ChatId::new(self.telegram_chat_id.parse::<i64>()?);
+        
+        let chat_id = self.telegram_chat_id.parse::<i64>()?;
         let mut save_status;
         
         match self.get_wallet_status(coin).await {
@@ -123,7 +110,7 @@ impl Alerter {
         let mut msg = add_utc_line(&save_status.formatted_networks_status());
         println!("{}", &msg);
         
-        self.send_telegram_message(&chat, &msg).await?;
+        self.send_telegram_message(chat_id, &msg).await?;
         
         let mut binance_retry: i32 = 0;
         let mut telegram_retry: i32 = 0;
@@ -135,7 +122,7 @@ impl Alerter {
                     if save_status != asset_status {
                         msg = add_utc_line(&asset_status.formatted_networks_status());
                         println!("{}",msg);
-                        if let Err(err) = self.send_telegram_message_timeout(&chat, &msg, Duration::from_secs(8)).await {
+                        if let Err(err) = self.send_telegram_message(chat_id, &msg).await {
                             println!("Error sending telegram msg {}", err);
                             telegram_retry += 1;
                         } else {
