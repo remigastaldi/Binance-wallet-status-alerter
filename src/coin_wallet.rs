@@ -15,7 +15,7 @@ pub struct CoinWallet {
 }
 
 impl fmt::Display for Network {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { //TODO: remove unwrap
         writeln!(f, "Network: {}", self.network).unwrap();
 
         match self.deposit {
@@ -31,7 +31,7 @@ impl fmt::Display for Network {
                 writeln!(f, "Withdrawal available").unwrap();
             }
             false => {
-                write!(f, "{}", self.withdraw_desc).unwrap();
+                writeln!(f, "{}", self.withdraw_desc).unwrap();
             }
         }
         Ok(())
@@ -46,7 +46,7 @@ impl CoinWallet {
     pub fn formatted_networks_status(&self) -> String {
         let mut msg = String::new();
         for (i, network) in self.networks.iter().enumerate() {
-            msg += &format!("{}{}{}", if i != 0 {"\n"} else {""}, network, if i + 1 < self.networks.len() {"\n"} else {""});
+            msg += &format!("{}{}", if i != 0 {"\n"} else {""}, network);
         }
         msg
     }
