@@ -21,7 +21,7 @@ fn add_utc_line(msg: &str) -> String {
 
 pub struct Alerter {
     telegram_bot_token: String,
-    telegram_chat_id: String,
+    telegram_chat_id: i64,
     api_key: String,
     secret_key: String,
     binance_client: Option<WithdrawalClient>,
@@ -30,7 +30,7 @@ pub struct Alerter {
 }
 
 impl Alerter {
-    pub fn new(telegram_bot_token: String, telegram_chat_id: String, api_key: String, secret_key: String) -> Self {
+    pub fn new(telegram_bot_token: String, telegram_chat_id: i64, api_key: String, secret_key: String) -> Self {
         Alerter{telegram_bot_token, telegram_chat_id, api_key, secret_key, binance_client: None, telegram_api: None, debug: false}
     }
     
@@ -87,9 +87,9 @@ impl Alerter {
         }
     }
     
-    async fn send_telegram_message(&self, chat_id: i64, msg: &str) -> Result<(), teloxide::RequestError> {
+    async fn send_telegram_message(&self, msg: &str) -> Result<(), teloxide::RequestError> {
         if let Some(api) = &self.telegram_api {
-            api.send_message(chat_id, msg).send().await?;
+            api.send_message(self.telegram_chat_id, msg).send().await?;
         }
         Ok (())
     }
@@ -99,7 +99,6 @@ impl Alerter {
         self.init_binance_api()?;
         self.init_telegram_api();
         
-        let chat_id = self.telegram_chat_id.parse::<i64>()?;
         let mut save_status;
         
         match self.get_wallet_status(coin).await {
@@ -110,7 +109,7 @@ impl Alerter {
         let mut msg = add_utc_line(&save_status.formatted_networks_status());
         println!("{}", &msg);
         
-        self.send_telegram_message(chat_id, &msg).await?;
+        self.send_telegram_message(&msg).await?;
         
         let mut binance_retry: i32 = 0;
         let mut telegram_retry: i32 = 0;
@@ -122,7 +121,7 @@ impl Alerter {
                     if save_status != asset_status {
                         msg = add_utc_line(&asset_status.formatted_networks_status());
                         println!("{}",msg);
-                        if let Err(err) = self.send_telegram_message(chat_id, &msg).await {
+                        if let Err(err) = self.send_telegram_message(&msg).await {
                             println!("Error sending telegram msg {}", err);
                             telegram_retry += 1;
                         } else {

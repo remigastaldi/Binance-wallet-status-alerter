@@ -34,7 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let api_key = env::var("BINANCE_API_KEY").expect("BINANCE_API_KEY not set");
     let secret_key = env::var("BINANCE_SECRET_KEY").expect("BINANCE_SECRET_KEY not set");
     
-    let mut alerter = alerter::Alerter::new(telegram_bot_token, telegram_chat_id, api_key, secret_key);
+    let mut alerter = alerter::Alerter::new(telegram_bot_token, telegram_chat_id.parse::<i64>()?, api_key, secret_key);
 
     alerter.run(matches.value_of("").unwrap(), debug).await?;
 
