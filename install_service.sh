@@ -12,7 +12,7 @@ After=network-online.target
 
 [Service]
 EnvironmentFile=/etc/binance-wallet-status-alerter/binance-wallet-status-alerter.conf
-ExecStart=$1
+ExecStart=$1 $2
 RestartSec=60s
 Restart=always
 TimeoutStopSec=10s

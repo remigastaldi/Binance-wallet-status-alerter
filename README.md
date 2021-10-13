@@ -19,7 +19,7 @@ Send an alert to a telegram channel every time a network deposit/withdrawal stat
 
     ```bash
     cargo build --release
-    ./target/debug/bn-wallet-status-alerter <Coin ticket>
+    ./target/debug/bn-wallet-status-alerter <COIN_TICKET>
     ```
 
 ## Usage example
@@ -37,7 +37,7 @@ To be sure the bot won't go offline after a reboot or an error, you can use the 
 1. Install the service
 
     ```bash
-    sudo ./install_service.sh <ABSOLUTE_PATH_TO_BN-WALLET-STATUS-ALERTER-BINARY>
+    sudo ./install_service.sh <ABSOLUTE_PATH_TO_BN-WALLET-STATUS-ALERTER-BINARY> <COIN_TICKET>
     ```
 
 2. Set the env variables `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `BINANCE_API_KEY` and `BINANCE_SECRET_KEY` to this file: `/etc/binance-wallet-status-alerter/binance-wallet-status-alerter.conf`
