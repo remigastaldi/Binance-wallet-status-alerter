@@ -15,6 +15,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .short("d")
             .long("debug")
             .help("Print additional logs and disable telegram messages"))
+        .arg(Arg::with_name("init")
+            .short("i")
+            .long("init")
+            .help("Start the bot by sending a message with the actual status of the network"))
         .arg(Arg::with_name("")
             .value_name("TOKEN NAME")
             .required(true)
@@ -36,7 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let mut alerter = alerter::Alerter::new(telegram_bot_token, telegram_chat_id.parse::<i64>()?, api_key, secret_key);
 
-    alerter.run(matches.value_of("").unwrap(), debug).await?;
+    alerter.run(matches.value_of("").unwrap(),matches.is_present("debug"), debug).await?;
 
     Ok(())
 }

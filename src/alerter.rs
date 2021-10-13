@@ -94,7 +94,7 @@ impl Alerter {
         Ok (())
     }
     
-    pub async fn run(&mut self, coin: &str, debug: bool) -> Result<(), Box<dyn std::error::Error>> { //TODO: use a proper error type
+    pub async fn run(&mut self, coin: &str, init: bool, debug: bool) -> Result<(), Box<dyn std::error::Error>> { //TODO: use a proper error type
         self.debug = debug;
         self.init_binance_api()?;
         self.init_telegram_api();
@@ -109,7 +109,9 @@ impl Alerter {
         let mut msg = add_utc_line(&save_status.formatted_networks_status());
         println!("{}", &msg);
         
-        self.send_telegram_message(&msg).await?;
+        if init {
+            self.send_telegram_message(&msg).await?;
+        }
         
         let mut binance_retry: i32 = 0;
         let mut telegram_retry: i32 = 0;
