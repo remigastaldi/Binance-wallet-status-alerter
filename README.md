@@ -42,8 +42,9 @@ To be sure the bot won't go offline after a reboot or an error, you can use the 
 
 2. Set the env variables `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `BINANCE_API_KEY` and `BINANCE_SECRET_KEY` to this file: `/etc/binance-wallet-status-alerter/binance-wallet-status-alerter.conf`
 
-3. Run the service
+3. Run and enable the service
 
     ```bash
     sudo systemctl start binance-wallet-status-alerter.service
+    sudo systemctl enable binance-wallet-status-alerter.service
     ```
