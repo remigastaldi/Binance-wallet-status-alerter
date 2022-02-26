@@ -6,7 +6,7 @@ Send an alert to a telegram channel every time a network deposit/withdrawal stat
 
 1. Download Rust
 2. Create a new telegram bot using [@Botfather](https://t.me/botfather) to get a token and a chatId
-3. You must set up those different environment variables:
+3. You must set up these different environment variables:
 
     ```bash
     export TELEGRAM_BOT_TOKEN=<Your token here>
