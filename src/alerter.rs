@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::coin_wallet::CoinWallet;
 
-use teloxide::{requests::{Request, Requester}, Bot};
+use teloxide::{requests::{Request, Requester}, Bot, types::{Recipient, ChatId}};
 
 use tokio::time::sleep;
 use tokio_binance::WithdrawalClient;
@@ -89,9 +89,9 @@ impl Alerter {
     
     async fn send_telegram_message(&self, msg: &str) -> Result<(), teloxide::RequestError> {
         if let Some(api) = &self.telegram_api {
-            api.send_message(self.telegram_chat_id, msg).send().await?;
+            api.send_message(Recipient::Id(ChatId(self.telegram_chat_id)), msg).send().await?;
         }
-        Ok (())
+      Ok (())
     }
     
     pub async fn run(&mut self, coin: &str, init: bool, debug: bool) -> Result<(), Box<dyn std::error::Error>> { //TODO: use a proper error type
