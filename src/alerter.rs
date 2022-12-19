@@ -4,6 +4,7 @@ use crate::coin_wallet::{CoinWallet, Network};
 
 use teloxide::{requests::{Request, Requester}, Bot, types::{Recipient, ChatId}};
 
+use tracing::{info, debug, error};
 use tokio::time::sleep;
 use tokio_binance::WithdrawalClient;
 use serde_json::Value;
@@ -53,7 +54,7 @@ impl Alerter {
                               .and_then(|coin| coin.get("networkList")).ok_or("networkList is null")?
                               .as_array().ok_or("error converting networkList to an array")?
                               .iter()
-                              .filter_map(|network| Network::try_from(network).map_err(|err| eprintln!("{err}")).ok())
+                              .filter_map(|network| Network::try_from(network).map_err(|err| error!("{err}")).ok())
                               .collect::<Vec<Network>>()
                               .into()),
                 Err(err) => Err(err.to_string())
@@ -79,11 +80,11 @@ impl Alerter {
         
         match self.get_wallet_status(coin).await {
             Ok(res) => save_status = res,
-            Err(err) => return Err(format!("Error getting wallet status: {}", err).into())
+            Err(err) => return Err(format!("Error getting wallet status: {err}").into())
         }
         
         let mut msg = add_utc_line(&save_status.formatted_networks_status());
-        println!("{}", &msg);
+        info!("{}", &msg);
         
         if init {
             self.send_telegram_message(&msg).await?;
@@ -93,14 +94,14 @@ impl Alerter {
         let mut telegram_retry: i32 = 0;
         
         loop {
-            println!("{}", add_utc_line("Send request to binance")); // for debug
+            info!("{}", add_utc_line("Send request to binance")); // for debug
             match self.get_wallet_status("AVAX").await {
                 Ok(asset_status) => {
                     if save_status != asset_status {
                         msg = add_utc_line(&asset_status.formatted_networks_status());
-                        println!("{}",msg);
+                        info!("{}",msg);
                         if let Err(err) = self.send_telegram_message(&msg).await {
-                            println!("Error sending telegram msg {}", err);
+                            info!("Error sending telegram msg {}", err);
                             telegram_retry += 1;
                         } else {
                             save_status = asset_status;
@@ -110,17 +111,17 @@ impl Alerter {
                     binance_retry = 0;
                 },
                 Err(err) => {
-                    eprintln!("Error getting wallet status: {}", err);
+                    error!("Error getting wallet status: {}", err);
                     binance_retry += 1;
                 }
             }
             if binance_retry == MAX_API_RETRY_BEFORE_DELAY {
-                println!("Too much binance api errors, waiting {} sc", API_RETRY_DELAY);
+                info!("Too much binance api errors, waiting {} sc", API_RETRY_DELAY);
                 sleep(Duration::from_secs(API_RETRY_DELAY)).await;
                 self.init_binance_api()?;
             }
             if telegram_retry == MAX_API_RETRY_BEFORE_DELAY {
-                println!("Too much telegram api errors, waiting {} sc", API_RETRY_DELAY);
+                info!("Too much telegram api errors, waiting {} sc", API_RETRY_DELAY);
                 sleep(Duration::from_secs(API_RETRY_DELAY)).await;
                 self.init_telegram_api();
             }

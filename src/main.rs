@@ -2,6 +2,8 @@ mod alerter;
 mod coin_wallet;
 
 use clap::{Arg, App};
+use tracing::info;
+use tracing_subscriber::FmtSubscriber;
 
 use std::env;
 
@@ -26,12 +28,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .help("Token name to monitor"))
         .get_matches();
 
-    let debug = if matches.is_present("debug") {
-        println!("Running in debug mod - telegram messages disabled");
-        true
-    } else {
-        false
-    };
+    let subscriber = FmtSubscriber::builder()
+        .with_target(false)
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber)
+        .expect("setting default subscriber failed");
+
+    info!("Starting");
+
+    let debug = matches.is_present("debug");
+    if debug {
+        info!("Running in debug mod - telegram messages disabled");
+    }
 
     let telegram_bot_token = env::var("TELEGRAM_BOT_TOKEN").expect("TELEGRAM_BOT_TOKEN not set");
     let telegram_chat_id = env::var("TELEGRAM_CHAT_ID").expect("TELEGRAM_CHAT_ID not set");
