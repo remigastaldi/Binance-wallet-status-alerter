@@ -1,6 +1,6 @@
-use std::time::Duration;
+use std::{time::Duration, convert::TryFrom};
 
-use crate::coin_wallet::CoinWallet;
+use crate::coin_wallet::{CoinWallet, Network};
 
 use teloxide::{requests::{Request, Requester}, Bot, types::{Recipient, ChatId}};
 
@@ -33,53 +33,29 @@ impl Alerter {
     pub fn new(telegram_bot_token: String, telegram_chat_id: i64, api_key: String, secret_key: String) -> Self {
         Alerter{telegram_bot_token, telegram_chat_id, api_key, secret_key, binance_client: None, telegram_api: None, debug: false}
     }
-    
+
     fn init_binance_api(&mut self) -> Result<(), tokio_binance::error::Error> {
         self.binance_client = Some(WithdrawalClient::connect(&self.api_key, &self.secret_key, "https://api.binance.com")?);
         Ok(())
     }
-    
+
     fn init_telegram_api(&mut self) {
         if !self.debug {
             self.telegram_api = Some(teloxide::Bot::new(&self.telegram_bot_token));
         }
     }
-    
+
     async fn get_wallet_status(&self, coin_name: &str) -> Result<CoinWallet, String> {
         if let Some(client) = &self.binance_client {
             match client.get_capital_config().with_recv_window(10000).json::<Vec<Value>>().await {
-                Ok(res) => {
-                    for coin in & res {
-                        if coin["coin"] == coin_name {
-                            let mut wallet = CoinWallet::new();
-                            
-                            return match coin["networkList"].as_array() {
-                                Some(networks) => {
-                                    for network in networks {
-                                        match network["network"].as_str() {
-                                            Some(network_name) => 
-                                            match network["depositEnable"].as_bool() {
-                                                Some(deposit_enable) => match network["depositDesc"].as_str() {
-                                                    Some(deposit_desc) => match  network["withdrawEnable"].as_bool() {
-                                                        Some(withdraw_enable) => match network["withdrawDesc"].as_str() {
-                                                            Some(withdraw_desc) => wallet.add_network(network_name,deposit_enable, deposit_desc, withdraw_enable, withdraw_desc),
-                                                            None => return Err(String::from("json: \"withdrawDesc\" is null"))
-                                                        }, None => return Err(String::from("json: \"withdrawEnable\" is null"))
-                                                    }, None => return Err(String::from("json: \"depositDesc\" is null"))
-                                                },
-                                                None => return Err(String::from("json: \"depositEnable\" is null"))
-                                            },
-                                            None => return Err(String::from("json: \"network\" is null"))
-                                        }
-                                    }
-                                    Ok(wallet)
-                                }
-                                None => Err(String::from("json: \"networkList\" is null")),
-                            }
-                        }
-                    }
-                    Err(format!("json: {} not found", coin_name))
-                },
+                Ok(res) => Ok(res.iter()
+                              .find(|item| item["coin"] == coin_name)
+                              .and_then(|coin| coin.get("networkList")).ok_or("networkList is null")?
+                              .as_array().ok_or("error converting networkList to an array")?
+                              .iter()
+                              .filter_map(|network| Network::try_from(network).map_err(|err| eprintln!("{err}")).ok())
+                              .collect::<Vec<Network>>()
+                              .into()),
                 Err(err) => Err(err.to_string())
             }
         } else {
