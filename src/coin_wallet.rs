@@ -10,12 +10,6 @@ pub struct Network {
     withdraw_desc: String,
 }
 
-impl Network {
-    pub fn new(network: &str, deposit: bool, deposit_desc: &str, withdraw: bool, withdraw_desc: &str) -> Self {
-        Network{ network: network.to_string(), deposit, deposit_desc: deposit_desc.to_string(), withdraw, withdraw_desc: withdraw_desc.to_string() }
-    }
-}
-
 impl TryFrom<&serde_json::Value> for Network {
     type Error = String;
 
